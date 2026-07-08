@@ -1,5 +1,8 @@
 package com.eiszdev.math_engine.algebra
 
+import com.eiszdev.math_engine.MathEngineException
+import com.eiszdev.math_engine.MathError.ParseError
+
 class Parser(private val tokens: List<Token>) {
     private var pos = 0
 
@@ -8,13 +11,13 @@ class Parser(private val tokens: List<Token>) {
 
         val token = consume()
         if (token !is Token.Op || token.char != '=') {
-            error("Expected '='")
+            throw parseError("Expected '='")
         }
 
         val right = parseExpression(0)
 
         if (pos < tokens.size) {
-            error("Unexpected token: ${tokens[pos]}")
+            throw parseError("Unexpected token: ${tokens[pos]}")
         }
 
         return Equation(left, right)
@@ -25,7 +28,7 @@ class Parser(private val tokens: List<Token>) {
             '+', '-' -> 1
             '*', '/' -> 2
             '=' -> -1
-            else -> error("Unknown operator $op")
+            else -> throw parseError("Unknown operator $op")
         }
 
     private fun parseExpression(minPrecedence: Int): Expression {
@@ -41,7 +44,7 @@ class Parser(private val tokens: List<Token>) {
                 '-' -> Sub(left, right)
                 '*' -> Mul(left, right)
                 '/' -> Div(left, right)
-                else -> error("Unknown operator $op")
+                else -> throw parseError("Unknown operator $op")
             }
         }
         return left
@@ -55,7 +58,7 @@ class Parser(private val tokens: List<Token>) {
                 if (token.char == '-') {
                     Neg(parsePrimary())
                 }
-                 else error("Unexpected token: $token")
+                 else throw parseError("Unexpected token: $token")
             }
 
             Token.LParen -> {
@@ -64,7 +67,7 @@ class Parser(private val tokens: List<Token>) {
                 expr
             }
 
-            else -> error("Unexpected token: $token")
+            else -> throw parseError("Unexpected token: $token")
         }
     }
 
@@ -72,13 +75,16 @@ class Parser(private val tokens: List<Token>) {
         tokens.getOrNull(pos)
 
     private fun consume(): Token =
-        tokens.getOrNull(pos++) ?: error("Unexpected end of input")
+        tokens.getOrNull(pos++) ?: throw parseError("Unexpected end of input")
 
     private fun peekOp(): Char? =
         (peek() as? Token.Op)?.char
 
     private inline fun <reified T : Token> expect() {
         val token = consume()
-        if (token !is T) error("Expected ${T::class.simpleName}, got $token")
+        if (token !is T) throw parseError("Expected ${T::class.simpleName}, got $token")
     }
+
+    private fun parseError(message: String) =
+        MathEngineException(ParseError(message))
 }

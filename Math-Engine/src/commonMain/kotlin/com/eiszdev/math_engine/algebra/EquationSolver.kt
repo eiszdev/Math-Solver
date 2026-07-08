@@ -1,5 +1,8 @@
 package com.eiszdev.math_engine.algebra
 
+import com.eiszdev.math_engine.MathEngineException
+import com.eiszdev.math_engine.MathError.InfiniteSolutions
+import com.eiszdev.math_engine.MathError.NoSolution
 import com.eiszdev.math_engine.utils.toLinear
 
 class EquationSolver {
@@ -11,7 +14,8 @@ class EquationSolver {
         val a = left.coeff - right.coeff
         val b = left.constant - right.constant
 
-        if (a == 0.0) error("No or infinite solutions")
+        if (a == 0.0 && b == 0.0) throw MathEngineException(InfiniteSolutions)
+        if (a == 0.0) throw MathEngineException(NoSolution)
 
         return -b / a
     }

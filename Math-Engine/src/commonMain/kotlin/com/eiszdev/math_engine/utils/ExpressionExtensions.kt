@@ -1,5 +1,7 @@
 package com.eiszdev.math_engine.utils
 
+import com.eiszdev.math_engine.MathEngineException
+import com.eiszdev.math_engine.MathError
 import com.eiszdev.math_engine.algebra.Add
 import com.eiszdev.math_engine.algebra.Div
 import com.eiszdev.math_engine.algebra.Expression
@@ -21,7 +23,7 @@ fun Expression.toLinear(variable: String): Linear =
         is Num -> Linear(0.0, value)
         is Var ->
             if (name == variable) Linear(1.0, 0.0)
-            else error("Unknown variable $name")
+            else throw MathEngineException(MathError.UnknownVariable(name))
 
         is Add -> {
             val a = left.toLinear(variable)
@@ -41,7 +43,7 @@ fun Expression.toLinear(variable: String): Linear =
 
             when {
                 a.coeff != 0.0 && b.coeff != 0.0 ->
-                    error("Non-linear term: x*x")
+                    throw MathEngineException(MathError.NonLinearTerm)
 
                 a.coeff != 0.0 ->
                     Linear(a.coeff * b.constant, a.constant * b.constant)
@@ -58,7 +60,8 @@ fun Expression.toLinear(variable: String): Linear =
             val a = left.toLinear(variable)
             val b = right.toLinear(variable)
 
-            if (b.coeff != 0.0) error("Division by variable")
+            if (b.coeff != 0.0) throw MathEngineException(MathError.DivisionByVariable)
+            if (b.constant == 0.0) throw MathEngineException(MathError.DivisionByZero)
 
             Linear(a.coeff / b.constant, a.constant / b.constant)
         }

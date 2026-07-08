@@ -1,5 +1,14 @@
 package com.eiszdev.math_engine.algebra
 
+import com.eiszdev.math_engine.MathEngineException
+import com.eiszdev.math_engine.MathError.InvalidNumber
+import com.eiszdev.math_engine.MathError.ParseError
+import com.eiszdev.math_engine.algebra.Token.Ident
+import com.eiszdev.math_engine.algebra.Token.LParen
+import com.eiszdev.math_engine.algebra.Token.Number
+import com.eiszdev.math_engine.algebra.Token.Op
+import com.eiszdev.math_engine.algebra.Token.RParen
+
 class Tokenizer {
 
     fun tokenize(input: String): List<Token> =
@@ -16,10 +25,10 @@ class Tokenizer {
             } else {
                 if (currentNumber.isNotEmpty()) {
                     val lastToken = if (tokens.size > 0) tokens[tokens.size-1] else null
-                    if (lastToken is Token.Ident || lastToken is Token.RParen) {
-                        tokens.add(Token.Op('*'))
+                    if (lastToken is Ident || lastToken is RParen) {
+                        tokens.add(Op('*'))
                     }
-                    tokens.add(Token.Number(currentNumber.toString().toDouble()))
+                    tokens.add(Number(parseNumber(currentNumber.toString())))
                     currentNumber.clear()
                 }
                 if (char.isLetter()) {
@@ -27,16 +36,16 @@ class Tokenizer {
                 } else {
                     if (currentIdentifier.isNotEmpty()) {
                         val lastToken = if (tokens.size > 0) tokens[tokens.size-1] else null
-                        if (lastToken is Token.Number || lastToken is Token.RParen) {
-                            tokens.add(Token.Op('*'))
+                        if (lastToken is Number || lastToken is RParen) {
+                            tokens.add(Op('*'))
                         }
-                        tokens.add(Token.Ident(currentIdentifier.toString()))
+                        tokens.add(Ident(currentIdentifier.toString()))
                         currentIdentifier.clear()
                     }
                     when (char) {
-                        '+', '-', '*', '/', '=' -> tokens.add(Token.Op(char))
-                        '(' -> tokens.add(Token.LParen)
-                        ')' -> tokens.add(Token.RParen)
+                        '+', '-', '*', '/', '=' -> tokens.add(Op(char))
+                        '(' -> tokens.add(LParen)
+                        ')' -> tokens.add(RParen)
                     }
                 }
 
@@ -44,11 +53,11 @@ class Tokenizer {
         }
 
         if (currentNumber.isNotEmpty()) {
-            tokens.add(Token.Number(currentNumber.toString().toDouble()))
+            tokens.add(Number(parseNumber(currentNumber.toString())))
         }
 
         if (currentIdentifier.isNotEmpty()) {
-            tokens.add(Token.Ident(currentIdentifier.toString()))
+            tokens.add(Ident(currentIdentifier.toString()))
         }
 
         return tokens
@@ -67,36 +76,40 @@ class Tokenizer {
                 c.isDigit() || c == '.' -> {
                     val start = i
                     while (i < input.length && (input[i].isDigit() || input[i] == '.')) i++
-                    tokens.add(Token.Number(input.substring(start, i).toDouble()))
+                    tokens.add(Number(parseNumber(input.substring(start, i))))
                 }
 
                 c.isLetter() -> {
                     val start = i
                     while (i < input.length && input[i].isLetter()) i++
-                    tokens.add(Token.Ident(input.substring(start, i)))
+                    tokens.add(Ident(input.substring(start, i)))
                 }
 
                 c in "+-*/=" -> {
-                    tokens.add(Token.Op(c))
+                    tokens.add(Op(c))
                     i++
                 }
 
                 c == '(' -> {
-                    tokens.add(Token.LParen)
+                    tokens.add(LParen)
                     i++
                 }
 
                 c == ')' -> {
-                    tokens.add(Token.RParen)
+                    tokens.add(RParen)
                     i++
                 }
 
-                else -> throw IllegalArgumentException("Invalid char: $c")
+                else -> throw MathEngineException(ParseError("Invalid char: $c"))
             }
         }
 
         return tokens
     }
+
+    private fun parseNumber(value: String): Double =
+        value.toDoubleOrNull()
+            ?: throw MathEngineException(InvalidNumber(value))
 
     fun insertImplicitMultiplication(tokens: List<Token>): List<Token> {
         val result = mutableListOf<Token>()
@@ -110,7 +123,7 @@ class Tokenizer {
             val b = tokens[i + 1]
 
             if (needsMul(a, b)) {
-                result.add(Token.Op('*'))
+                result.add(Op('*'))
             }
         }
 
@@ -118,8 +131,8 @@ class Tokenizer {
     }
 
     private fun needsMul(a: Token, b: Token): Boolean =
-        (a is Token.Number || a is Token.Ident || a is Token.RParen) &&
-                (b is Token.Number || b is Token.Ident || b is Token.LParen)
+        (a is Number || a is Ident || a is RParen) &&
+                (b is Number || b is Ident || b is LParen)
 
 
 }
